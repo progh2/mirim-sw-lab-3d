@@ -1217,7 +1217,7 @@ const net = { mode: 'nw', grp: new THREE.Group(), east: new THREE.Group(), nwOnl
 // 네트워크함 위치별 배선 (좌북쪽 / 복도쪽 기둥)
 const NET_POS = {
   nw: { pos: [0.5, 2.52, 0.205], ry: 0 },                                   // 앞벽 좌측 상단 (천장 아래)
-  east: { pos: [M(L.pillarE[0]) - 0.205, 2.52, M((L.pillarE[1] + L.pillarE[3]) / 2)], ry: -Math.PI / 2 },   // 복도쪽 기둥 상단
+  east: { pos: [CX0 + 0.205, 2.36, M((L.pillarE[1] + L.pillarE[3]) / 2)], ry: Math.PI / 2 },   // 복도쪽 기둥 뒤 복도 벽 상단 (복도 천장 2.7 아래)
 };
 const LANM = mat(0x2f6fd6, { roughness: 0.5 }), PWRM = mat(0xd02020, { roughness: 0.5 });
 function segBox(a, b, r, m, parent) {     // 두 점 사이 굵기 r 막대
@@ -1236,8 +1236,13 @@ function poly(points, r, m, parent) { for (let i = 0; i < points.length - 1; i++
   const ty = 3.1, tz = 0.9, pz = NET_POS.east.pos[2], px = M(L.pillarE[0]);
   const tray = mat(0x9aa1a5, { metalness: 0.7, roughness: 0.35 });
   poly([[0.16, ty, 0.1], [0.9, ty, tz]], 0.06, tray, E); poly([[0.9, ty, tz], [5.75, ty, tz]], 0.06, tray, E); poly([[5.75, ty, tz], [5.75, ty, pz]], 0.06, tray, E);
-  poly([[0.16, ty + 0.03, 0.1], [0.9, ty + 0.03, tz], [5.75, ty + 0.03, tz], [5.75, ty + 0.03, pz], [px - 0.2, 2.82, pz]], 0.03, LANM, E);
-  box(0.1, 2.25 - FL, 0.14, mat(0xe7e8e6), px - 0.05, (2.25 + FL) / 2, pz + 0.22, { parent: E });   // 기둥 따라 내려가는 덕트
+  // 교실 천장 트레이 → 기둥 상부를 관통 → 복도 쪽 네트워크함 윗면
+  poly([[0.16, ty + 0.03, 0.1], [0.9, ty + 0.03, tz], [5.75, ty + 0.03, tz], [5.75, ty + 0.03, pz], [px - 0.02, 2.8, pz - 0.1]], 0.03, LANM, E);
+  const cond = mat(0xe7e8e6, { roughness: 0.6 });
+  poly([[CX0, 2.6, pz - 0.1], [CX0 + 0.2, 2.6, pz - 0.1], [CX0 + 0.2, 2.54, pz - 0.1]], 0.05, cond, E);       // 복도 쪽 인입 몰드
+  poly([[CX0 + 0.2, 2.18, pz + 0.12], [CX0 + 0.2, 2.06, pz + 0.12], [CX0, 2.06, pz + 0.12]], 0.05, cond, E);   // 함 아래 → 벽 관통
+  // 교실 쪽: 기둥 면을 따라 바닥까지 내려가는 덕트
+  box(0.1, 2.06 - FL, 0.14, cond, px - 0.05, (2.06 + FL) / 2, pz + 0.22, { parent: E });
 }
 const under = { grp: null };
 function buildUnderfloor() {
@@ -1469,7 +1474,7 @@ function frame() {
     aimed.kind === 'toggle' ? ({ center: () => layout.center ? '[4] 교사 책상을 창가로 되돌리기' : '[4] 교사 책상을 가운데(교탁 위치)로 옮기기',
       class: () => layout.cls ? '[5] 컴퓨터 실습 배치로 되돌리기' : '[5] 일반 수업 배치로 바꾸기 (모니터 접기·책 펴기)',
       w700: () => '[7] 학생 책상 폭 70cm', w800: () => '[8] 학생 책상 폭 80cm', w900: () => '[9] 학생 책상 폭 90cm',
-      net: () => net.mode === 'nw' ? '[0] 네트워크함을 복도쪽 기둥 위로 옮기기' : '[0] 네트워크함을 좌북쪽(앞벽)으로 되돌리기',
+      net: () => net.mode === 'nw' ? '[0] 네트워크함을 복도(기둥 뒤 복도 벽)로 옮기기' : '[0] 네트워크함을 좌북쪽(앞벽)으로 되돌리기',
       xray: () => xray.on ? '[6] 바닥 투시 끄기' : '[6] 바닥 투시 — 바닥 아래 LAN(파랑)·전원(빨강) 배선 보기' }[aimed.key]()) + ' · 클릭 또는 E' : aimed.kind === 'door' ? `문 ${aimed.door.open ? '닫기' : '열기'} · 클릭 또는 E` :
     aimed.kind === 'chair' ? `${aimed.chair.no}번 의자에 앉기 · 클릭 또는 E` : '다른 학생이 앉아 있는 자리';
   if (toastT > 0) { toastT -= dt; } else { tip.hidden = !tipText; tip.textContent = tipText; }
